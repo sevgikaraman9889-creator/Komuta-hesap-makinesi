@@ -215,6 +215,48 @@
           <input type="number" id="tbGibInput" value="1024" min="1" oninput="setTbToGib(this.value)">
         </div>
       </div>
+      <div class="field-row" id="priceFieldsRow">
+        <div class="field">
+          <label>vCPU fiyatı ($/saat)</label>
+          <input type="number" id="price_vcpu" step="0.000001" oninput="setPrice('vcpu', this.value)">
+        </div>
+        <div class="field">
+          <label>RAM fiyatı ($/saat, GiB başına)</label>
+          <input type="number" id="price_ram" step="0.000001" oninput="setPrice('ram', this.value)">
+        </div>
+        <div class="field" id="priceStorageField">
+          <label>Depolama fiyatı ($/saat, GiB başına)</label>
+          <input type="number" id="price_storage" step="0.000001" oninput="setPrice('storage', this.value)">
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn small" onclick="resetPrices()">Fiyatları Varsayılana Sıfırla</button>
+      </div>
+      <p class="field .hint" style="font-size:0.74rem;color:var(--text-muted);margin-top:8px;">
+        Bu fiyatlar geçici bir deneme alanıdır — burada değiştirdiğiniz değerler sadece o an ekranda gördüğünüz hesaplamayı etkiler. Bir kümeyi kaydettiğinizde, o an kullandığınız fiyatlar da kümeyle birlikte kalıcı olarak saklanır; farklı fiyat senaryolarını ayrı kümeler olarak kaydedip aşağıdaki tabloda karşılaştırabilirsiniz.
+      </p>
+
+      <div class="field-row" id="oversellFieldsRow" style="margin-top:16px;">
+        <div class="field">
+          <label>vCPU oversell çarpanı</label>
+          <input type="number" id="oversell_vcpu" step="0.1" oninput="setOversell('vcpu', this.value)">
+          <span class="hint">Örn. 2 = fiziksel 1 vCPU, satışta 2 vCPU olarak sayılır</span>
+        </div>
+        <div class="field">
+          <label>RAM oversell çarpanı</label>
+          <input type="number" id="oversell_ram" step="0.1" oninput="setOversell('ram', this.value)">
+        </div>
+        <div class="field" id="oversellStorageField">
+          <label>Depolama oversell çarpanı</label>
+          <input type="number" id="oversell_storage" step="0.1" oninput="setOversell('storage', this.value)">
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn small" onclick="resetOversell()">Oversell Çarpanlarını Varsayılana Sıfırla</button>
+      </div>
+      <p class="field .hint" style="font-size:0.74rem;color:var(--text-muted);margin-top:8px;">
+        Oversell çarpanı, fiziksel doluluk %'sini veya sayfadaki kapasite/başabaş göstergelerinin fiziksel bazını değiştirmez — sadece o kaynaktan elde edilen gelir hesaplanırken satılabilir birim sayısını çarpar (Komuta'nın "aynı anda herkes %100 talep etmez" varsayımına dayanan ticari kararı, resmi fiyat listesinin bir parçası değildir).
+      </p>
     </details>
 
     <div class="summary-line" id="capSummary"></div>
@@ -313,7 +355,7 @@
   </section>
 
   <footer class="note">
-    Not: Üstteki girdi alanları (küme/sunucu/servis tipi) sayfa yenilenince sıfırlanır — sadece "Kümeler Karşılaştırması" bölümünde kaydettiğiniz kümeler sunucudaki veritabanında kalıcı olarak saklanır ve herkesle paylaşılır. Hesaplamalar, Komuta_Basabas_Noktasi_Modeli.xlsx ve Komuta_Basabas_Raporu.docx'te doğrulanmış aynı formüllere dayanır: gelir doğrusaldır, sabit maliyet dolulukla değişmez, geliştirme maliyeti dahil değildir. Doluluk % ve başabaş noktası burada fiziksel sunucunun tamamına göre gösterilir (satılabilir tavanı — %100 − overhead — aşan seviyeler için uyarı verilir); satılabilir havuza göre karşılığı her yerde yanında ayrıca gösterilir. Kümeler karşılaştırma tablosundaki %20/%50/%100 kâr referans noktaları ise raporla ve Excel modeliyle birebir tutarlı kalması için satılabilir havuza göre hesaplanmıştır (bkz. tablo altındaki not).
+    Not: Üstteki girdi alanları (küme/sunucu/servis tipi/fiyatlar/oversell çarpanları) sayfa yenilenince sıfırlanır — sadece "Kümeler Karşılaştırması" bölümünde kaydettiğiniz kümeler (o an kullandığınız fiyat ve oversell ayarlarıyla birlikte) sunucudaki veritabanında kalıcı olarak saklanır ve herkesle paylaşılır. Hesaplamalar, Komuta_Basabas_Noktasi_Modeli.xlsx ve Komuta_Basabas_Raporu.docx'te doğrulanmış aynı formüllere dayanır: gelir doğrusaldır, sabit maliyet dolulukla değişmez, geliştirme maliyeti dahil değildir. Bu rapor ve Excel modeli oversell'siz (1:1) hesaplanmıştır — buradaki oversell çarpanı varsayılan olarak açık (vCPU ×2) geldiği için, bu uygulamanın ürettiği gelir/kâr rakamları artık rapor ve Excel'den kasıtlı olarak farklı olabilir; oversell'i "1" yaparak eski (rapor/Excel ile birebir) davranışa dönebilirsiniz. Doluluk % ve başabaş noktası burada fiziksel sunucunun tamamına göre gösterilir (satılabilir tavanı — %100 − overhead — aşan seviyeler için uyarı verilir); satılabilir havuza göre karşılığı her yerde yanında ayrıca gösterilir. Kümeler karşılaştırma tablosundaki %20/%50/%100 kâr referans noktaları ise raporla ve Excel modeliyle birebir tutarlı kalması için satılabilir havuza göre hesaplanmıştır (bkz. tablo altındaki not) — ancak oversell açıkken bu sütunlar da oversell'in etkisini içerir.
   </footer>
 </div>
 
@@ -323,6 +365,18 @@
     postgres: { vcpu: 0.017847, ram: 0.007139, storage: 0.000201 },
     rabbitmq: { vcpu: 0.017847, ram: 0.007139, storage: 0.000201 },
     valkey:   { vcpu: 0.017847, ram: 0.007139, storage: 0.000201 },
+  };
+  // Oversell multipliers: a business decision (NOT part of the official
+  // AppBillingPrices data) that says a given physical unit of a resource is
+  // sold as more than one billable unit, because not every tenant demands
+  // 100% at the same time. Today vCPU is oversold 2x; RAM/storage are not
+  // oversold yet but the multiplier is editable per resource per service type
+  // in case that changes later (e.g. RAM at 1.5x).
+  const DEFAULT_OVERSELL = {
+    paas:     { vcpu: 2, ram: 1, storage: 1 },
+    postgres: { vcpu: 2, ram: 1, storage: 1 },
+    rabbitmq: { vcpu: 2, ram: 1, storage: 1 },
+    valkey:   { vcpu: 2, ram: 1, storage: 1 },
   };
   const HAS_STORAGE = { paas: false, postgres: true, rabbitmq: true, valkey: true };
   const TYPE_LABEL = { paas: 'App Hosting (PaaS)', postgres: 'PostgreSQL', rabbitmq: 'RabbitMQ', valkey: 'Valkey' };
@@ -335,6 +389,12 @@
     serviceType: 'paas',
     occupancy: 50,
     newServer: { ram: 64, vcpu: 18, storageTB: 1, rent: 120, backupPct: 7, networkPct: 10 },
+    // Editable per-type price overrides, seeded from PRICE_HOURLY (the official
+    // AppBillingPrices figures). These only affect the LIVE screen — switching
+    // service type keeps each type's own override, and "Fiyatları Varsayılana
+    // Sıfırla" restores the current type's values from PRICE_HOURLY.
+    prices: JSON.parse(JSON.stringify(PRICE_HOURLY)),
+    oversell: JSON.parse(JSON.stringify(DEFAULT_OVERSELL)),
     savedClusters: [],
   };
 
@@ -366,10 +426,10 @@
     const ceiling = 1 - overheadPct / 100;
     return { vcpu: capacity.vcpu * ceiling, ram: capacity.ram * ceiling, storageGiB: capacity.storageGiB * ceiling, ceiling };
   }
-  function revenue100Of(sellable, type, hoursPerMonth) {
-    const p = PRICE_HOURLY[type];
-    let rev = sellable.vcpu * p.vcpu * hoursPerMonth + sellable.ram * p.ram * hoursPerMonth;
-    if (HAS_STORAGE[type]) rev += sellable.storageGiB * p.storage * hoursPerMonth;
+  function revenue100Of(pool, prices, hoursPerMonth, hasStorage, oversell) {
+    const ov = oversell || { vcpu: 1, ram: 1, storage: 1 };
+    let rev = pool.vcpu * ov.vcpu * prices.vcpu * hoursPerMonth + pool.ram * ov.ram * prices.ram * hoursPerMonth;
+    if (hasStorage) rev += pool.storageGiB * ov.storage * prices.storage * hoursPerMonth;
     return rev;
   }
 
@@ -425,8 +485,46 @@
   }
   function setHours(v) { state.hoursPerMonth = parseKeepPrevious(v, state.hoursPerMonth); recalc(); }
   function setTbToGib(v) { state.tbToGib = parseKeepPrevious(v, state.tbToGib); recalc(); }
-  function setServiceType(v) { state.serviceType = v; recalc(); }
+  function setServiceType(v) { state.serviceType = v; renderPriceInputs(); renderOversellInputs(); recalc(); }
   function setOccupancy(v) { state.occupancy = parseKeepPrevious(v, state.occupancy); recalc(); }
+
+  // ---- Editable price parameters (live "what if prices change" exploration) ----
+  function renderPriceInputs() {
+    const p = state.prices[state.serviceType];
+    document.getElementById('price_vcpu').value = p.vcpu;
+    document.getElementById('price_ram').value = p.ram;
+    document.getElementById('price_storage').value = p.storage;
+    document.getElementById('priceStorageField').style.display = HAS_STORAGE[state.serviceType] ? '' : 'none';
+  }
+  function setPrice(field, val) {
+    const current = state.prices[state.serviceType];
+    current[field] = parseKeepPrevious(val, current[field]);
+    recalc();
+  }
+  function resetPrices() {
+    state.prices[state.serviceType] = { ...PRICE_HOURLY[state.serviceType] };
+    renderPriceInputs();
+    recalc();
+  }
+
+  // ---- Editable oversell multipliers (business decision, not part of AppBillingPrices) ----
+  function renderOversellInputs() {
+    const o = state.oversell[state.serviceType];
+    document.getElementById('oversell_vcpu').value = o.vcpu;
+    document.getElementById('oversell_ram').value = o.ram;
+    document.getElementById('oversell_storage').value = o.storage;
+    document.getElementById('oversellStorageField').style.display = HAS_STORAGE[state.serviceType] ? '' : 'none';
+  }
+  function setOversell(field, val) {
+    const current = state.oversell[state.serviceType];
+    current[field] = parseKeepPrevious(val, current[field]);
+    recalc();
+  }
+  function resetOversell() {
+    state.oversell[state.serviceType] = { ...DEFAULT_OVERSELL[state.serviceType] };
+    renderOversellInputs();
+    recalc();
+  }
 
   // ---- Saved clusters (persisted server-side in PostgreSQL via /api/clusters) ----
   // Only the raw configuration (servers, overhead, service type, ...) is stored in the
@@ -437,8 +535,14 @@
     const capacity = capacityOf(cfg.servers, cfg.tbToGib);
     const sellable = sellableOf(capacity, cfg.overhead);
     const fixedCost = fixedCostOf(cfg.servers);
-    const revenue100Phys = revenue100Of(capacity, cfg.serviceType, cfg.hoursPerMonth);
-    const revenue100Sell = revenue100Of(sellable, cfg.serviceType, cfg.hoursPerMonth);
+    // Use the prices saved WITH this cluster (its own price snapshot at save time),
+    // falling back to the current default PRICE_HOURLY for older rows saved before
+    // prices were captured.
+    const prices = (cfg.prices && Number.isFinite(cfg.prices.vcpu)) ? cfg.prices : PRICE_HOURLY[cfg.serviceType];
+    const oversell = (cfg.oversell && Number.isFinite(cfg.oversell.vcpu)) ? cfg.oversell : DEFAULT_OVERSELL[cfg.serviceType];
+    const hasStorage = HAS_STORAGE[cfg.serviceType];
+    const revenue100Phys = revenue100Of(capacity, prices, cfg.hoursPerMonth, hasStorage, oversell);
+    const revenue100Sell = revenue100Of(sellable, prices, cfg.hoursPerMonth, hasStorage, oversell);
     const bePhys = revenue100Phys > 0 ? (fixedCost / revenue100Phys) * 100 : Infinity;
     const bePct = revenue100Sell > 0 ? (fixedCost / revenue100Sell) * 100 : Infinity;
     const profitAt = (pct) => (revenue100Sell * pct / 100) - fixedCost;
@@ -460,6 +564,8 @@
         overhead: Number(r.overhead),
         hoursPerMonth: Number(r.hours_per_month),
         tbToGib: Number(r.tb_to_gib),
+        prices: r.prices,
+        oversell: r.oversell,
       }));
       renderSavedClusters(null);
     } catch (err) {
@@ -477,6 +583,8 @@
       overhead: state.overhead,
       hoursPerMonth: state.hoursPerMonth,
       tbToGib: state.tbToGib,
+      prices: state.prices[state.serviceType],
+      oversell: state.oversell[state.serviceType],
     };
     const btn = document.getElementById('saveClusterBtn');
     btn.disabled = true;
@@ -561,16 +669,24 @@
     const capacity = capacityOf(state.servers, state.tbToGib);
     const sellable = sellableOf(capacity, state.overhead);
     const fixedCost = fixedCostOf(state.servers);
-    const revenue100Phys = revenue100Of(capacity, state.serviceType, state.hoursPerMonth);
-    const revenue100Sell = revenue100Of(sellable, state.serviceType, state.hoursPerMonth);
+    const prices = state.prices[state.serviceType];
+    const oversell = state.oversell[state.serviceType];
+    const hasStorage = HAS_STORAGE[state.serviceType];
+    const revenue100Phys = revenue100Of(capacity, prices, state.hoursPerMonth, hasStorage, oversell);
+    const revenue100Sell = revenue100Of(sellable, prices, state.hoursPerMonth, hasStorage, oversell);
     const bePhys = revenue100Phys > 0 ? (fixedCost / revenue100Phys) * 100 : Infinity;
     const bePct = revenue100Sell > 0 ? (fixedCost / revenue100Sell) * 100 : Infinity;
     const ceilingPct = sellable.ceiling * 100; // e.g. 70 when overhead = 30
 
+    const anyOversell = oversell.vcpu !== 1 || oversell.ram !== 1 || (hasStorage && oversell.storage !== 1);
+    const oversellNote = anyOversell
+      ? ` &nbsp;|&nbsp; Oversell dahil satılabilir (×${fmtNum(oversell.vcpu,1)} vCPU${oversell.ram!==1?`, ×${fmtNum(oversell.ram,1)} RAM`:''}${hasStorage&&oversell.storage!==1?`, ×${fmtNum(oversell.storage,1)} depolama`:''}): <b>${fmtNum(sellable.vcpu*oversell.vcpu,1)} vCPU, ${fmtNum(sellable.ram*oversell.ram,1)} GiB RAM${hasStorage ? `, ${fmtNum(sellable.storageGiB*oversell.storage,0)} GiB depolama` : ''}</b>`
+      : '';
     document.getElementById('capSummary').innerHTML =
       `Toplam kapasite: <b>${fmtNum(capacity.vcpu,1)} vCPU, ${fmtNum(capacity.ram,1)} GiB RAM${HAS_STORAGE[state.serviceType] ? `, ${fmtNum(capacity.storageGiB,0)} GiB depolama` : ''}</b> &nbsp;→&nbsp; ` +
       `Satılabilir havuz (%${fmtNum(100-state.overhead,0)}): <b>${fmtNum(sellable.vcpu,1)} vCPU, ${fmtNum(sellable.ram,1)} GiB RAM${HAS_STORAGE[state.serviceType] ? `, ${fmtNum(sellable.storageGiB,0)} GiB depolama` : ''}</b> &nbsp;|&nbsp; ` +
-      `Sabit aylık maliyet: <b>${fmtUSD(fixedCost)}</b> &nbsp;|&nbsp; %100 doluluk geliri (fiziksel): <b>${fmtUSD(revenue100Phys)}</b> (satılabilir tavanda: ${fmtUSD(revenue100Sell)})`;
+      `Sabit aylık maliyet: <b>${fmtUSD(fixedCost)}</b> &nbsp;|&nbsp; %100 doluluk geliri (fiziksel): <b>${fmtUSD(revenue100Phys)}</b> (satılabilir tavanda: ${fmtUSD(revenue100Sell)})` +
+      oversellNote;
 
     // Block 2 — occupancy is now read straight off the physical 0-100 scale.
     const occ = state.occupancy;
@@ -617,7 +733,7 @@
       storageGiB: capacity.storageGiB + (state.newServer.storageTB || 0) * state.tbToGib,
     };
     const newFixedCost = fixedCost + fixedCostOf([state.newServer]);
-    const newRevenue100Phys = revenue100Of(newCapacity, state.serviceType, state.hoursPerMonth);
+    const newRevenue100Phys = revenue100Of(newCapacity, prices, state.hoursPerMonth, hasStorage, oversell);
     const Y = revenue; // unchanged real revenue
     const newOccPct = newRevenue100Phys > 0 ? (Y / newRevenue100Phys) * 100 : 0;
     const newBePct = newRevenue100Phys > 0 ? (newFixedCost / newRevenue100Phys) * 100 : Infinity;
@@ -648,6 +764,8 @@
 
   // init
   renderServers();
+  renderPriceInputs();
+  renderOversellInputs();
   loadClusters();
   recalc();
 </script>
