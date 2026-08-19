@@ -25,11 +25,27 @@ function validateServers(servers) {
   return null;
 }
 
+function validatePrices(prices) {
+  if (!prices || typeof prices !== 'object') return 'prices gerekli';
+  for (const key of ['vcpu', 'ram', 'storage']) {
+    if (!isFiniteNumber(prices[key])) return `prices alanı geçersiz: ${key}`;
+  }
+  return null;
+}
+
+function validateOversell(oversell) {
+  if (!oversell || typeof oversell !== 'object') return 'oversell gerekli';
+  for (const key of ['vcpu', 'ram', 'storage']) {
+    if (!isFiniteNumber(oversell[key])) return `oversell alanı geçersiz: ${key}`;
+  }
+  return null;
+}
+
 // GET /api/clusters — list all saved clusters, newest first.
 app.get('/api/clusters', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, name, service_type, servers, overhead, hours_per_month, tb_to_gib, created_at FROM clusters ORDER BY created_at DESC'
+      'SELECT id, name, service_type, servers, overhead, hours_per_month, tb_to_gib, prices, oversell, created_at FROM clusters ORDER BY created_at DESC'
     );
     res.json(rows);
   } catch (err) {
@@ -40,7 +56,7 @@ app.get('/api/clusters', async (req, res) => {
 
 // POST /api/clusters — save a new cluster configuration.
 app.post('/api/clusters', async (req, res) => {
-  const { name, serviceType, servers, overhead, hoursPerMonth, tbToGib } = req.body || {};
+  const { name, serviceType, servers, overhead, hoursPerMonth, tbToGib, prices, oversell } = req.body || {};
 
   if (typeof name !== 'string' || !name.trim()) {
     return res.status(400).json({ error: 'name gerekli.' });
@@ -53,15 +69,19 @@ app.post('/api/clusters', async (req, res) => {
   if (!isFiniteNumber(overhead) || overhead < 0 || overhead > 90) {
     return res.status(400).json({ error: 'overhead 0-90 arasında bir sayı olmalı.' });
   }
+  const priceErr = validatePrices(prices);
+  if (priceErr) return res.status(400).json({ error: priceErr });
+  const oversellErr = validateOversell(oversell);
+  if (oversellErr) return res.status(400).json({ error: oversellErr });
   const hours = isFiniteNumber(hoursPerMonth) ? hoursPerMonth : 730;
   const tbGib = isFiniteNumber(tbToGib) ? tbToGib : 1024;
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO clusters (name, service_type, servers, overhead, hours_per_month, tb_to_gib)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, name, service_type, servers, overhead, hours_per_month, tb_to_gib, created_at`,
-      [name.trim(), serviceType, JSON.stringify(servers), overhead, hours, tbGib]
+      `INSERT INTO clusters (name, service_type, servers, overhead, hours_per_month, tb_to_gib, prices, oversell)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, name, service_type, servers, overhead, hours_per_month, tb_to_gib, prices, oversell, created_at`,
+      [name.trim(), serviceType, JSON.stringify(servers), overhead, hours, tbGib, JSON.stringify(prices), JSON.stringify(oversell)]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
