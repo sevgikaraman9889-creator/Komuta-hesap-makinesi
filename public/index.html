@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Komuta Başabaş Noktası Hesap Makinesi</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:      #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6;
+    --good:           #0ca30c;
+    --good-text:      #006300;
+    --critical:       #d03b3b;
+    --warning:        #b8790a;
+    --warning-bg:     #fff3d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:      #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1:       #3987e5;
+      --good:           #0ca30c;
+      --good-text:      #4ade4a;
+      --critical:       #e66767;
+      --warning:        #fab219;
+      --warning-bg:     #3a2f10;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    line-height: 1.45;
+  }
+  .app { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { margin-bottom: 22px; }
+  header h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    font-size: 1.05rem;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card .sub { color: var(--text-secondary); font-size: 0.86rem; margin: 0 0 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
+  @media (max-width: 880px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  table.servers { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  table.servers th, table.servers td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--gridline); }
+  table.servers th { color: var(--text-secondary); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.02em; }
+  table.servers input {
+    width: 100%; padding: 6px 7px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--page-plane); color: var(--text-primary); font-size: 0.88rem; font-variant-numeric: tabular-nums;
+  }
+  table.servers input:focus { outline: 2px solid var(--series-1); outline-offset: -1px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary); font-size: 0.86rem; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--series-1); }
+  .btn.primary { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+  .btn.danger { color: var(--critical); }
+  .btn.small { padding: 4px 9px; font-size: 0.78rem; font-weight: 500; }
+  .row-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+  .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 14px; margin-top: 14px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; }
+  .field input, .field select {
+    padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--page-plane); color: var(--text-primary); font-size: 0.9rem; font-variant-numeric: tabular-nums;
+  }
+  .field .hint { font-size: 0.74rem; color: var(--text-muted); }
+
+  .summary-line { margin-top: 16px; padding: 12px 14px; background: var(--page-plane); border-radius: 8px; font-size: 0.86rem; color: var(--text-secondary); }
+  .summary-line b { color: var(--text-primary); }
+
+  .slider-wrap { position: relative; margin: 22px 4px 8px; padding-top: 14px; }
+  .slider-wrap input[type=range] { width: 100%; accent-color: var(--series-1); height: 22px; }
+  .be-marker {
+    position: absolute; top: 0; width: 2px; height: 30px; background: var(--warning);
+    transform: translateX(-1px);
+  }
+  .be-marker .tag {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    font-size: 0.68rem; font-weight: 700; color: var(--warning); white-space: nowrap;
+  }
+  .ceiling-marker {
+    position: absolute; top: 0; width: 2px; height: 30px; background: var(--critical);
+    transform: translateX(-1px); border-left: 2px dashed var(--critical); background: none;
+  }
+  .ceiling-marker .tag {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    font-size: 0.68rem; font-weight: 700; color: var(--critical); white-space: nowrap;
+  }
+  .occ-readout { display: flex; justify-content: space-between; font-size: 0.86rem; color: var(--text-secondary); margin-top: 2px; }
+  .occ-readout b { color: var(--text-primary); font-size: 1.05rem; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 12px; margin-top: 16px; }
+  .tile { padding: 12px 14px; border-radius: 10px; background: var(--page-plane); border: 1px solid var(--border); }
+  .tile .label { font-size: 0.74rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 4px; }
+  .tile .value { font-size: 1.28rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .value.good { color: var(--good-text); }
+  .tile .value.bad { color: var(--critical); }
+  .tile .tag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; margin-left: 6px; }
+  .tile .tag.good { color: var(--good-text); }
+  .tile .tag.bad { color: var(--critical); }
+
+  .whatif-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  @media (max-width: 560px) { .whatif-cols { grid-template-columns: 1fr; } }
+  .whatif-col h3 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-secondary); margin: 0 0 10px; }
+  .whatif-col .tiles { grid-template-columns: 1fr; gap: 8px; }
+  .whatif-col .tile { padding: 10px 12px; }
+  .whatif-col .tile .value { font-size: 1.1rem; }
+  .needed-box { margin-top: 14px; padding: 14px; border-radius: 10px; background: var(--warning-bg); border: 1px solid var(--border); }
+  .needed-box .label { font-size: 0.78rem; font-weight: 700; color: var(--warning); text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 4px; }
+  .needed-box .value { font-size: 1.25rem; font-weight: 700; }
+
+  table.compare { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin-top: 14px; }
+  table.compare th, table.compare td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--gridline); font-variant-numeric: tabular-nums; }
+  table.compare th:first-child, table.compare td:first-child { text-align: left; font-variant-numeric: normal; }
+  table.compare th { color: var(--text-secondary); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.02em; }
+  table.compare td.profit-good { color: var(--good-text); font-weight: 600; }
+  table.compare td.profit-bad { color: var(--critical); font-weight: 600; }
+  .empty-note { color: var(--text-muted); font-size: 0.86rem; font-style: italic; }
+
+  details.advanced { margin-top: 14px; }
+  details.advanced summary { cursor: pointer; font-size: 0.84rem; color: var(--text-secondary); font-weight: 600; }
+  .warn-banner { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--warning-bg); color: var(--warning); font-size: 0.84rem; font-weight: 600; }
+  footer.note { color: var(--text-muted); font-size: 0.78rem; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Komuta Başabaş Noktası Hesap Makinesi</h1>
+    <p>Küme kurun, servis tipini seçin, dolulukla birlikte kâr/zarar ve başabaş noktasını canlı görün. Sağdaki verilerle "yeni sunucu eklersem ne olur" sorusunu da anında cevaplayabilirsiniz.</p>
+  </header>
+
+  <!-- BLOCK 1: Küme & Sunucu Girişi + Servis Tipi -->
+  <section class="card">
+    <h2>1. Küme, Sunucular ve Servis Tipi</h2>
+    <p class="sub">Kümeye bağladığınız sunucuların özellik ve maliyetlerini girin; toplam kapasite ve sabit maliyet otomatik hesaplanır.</p>
+
+    <div class="field-row" style="margin-top:0;">
+      <div class="field">
+        <label>Küme adı</label>
+        <input type="text" id="clusterName" value="Küme 1">
+      </div>
+      <div class="field">
+        <label>Servis tipi</label>
+        <select id="serviceType" onchange="setServiceType(this.value)">
+          <option value="paas">App Hosting (PaaS)</option>
+          <option value="postgres">Yönetilen Servis — PostgreSQL</option>
+          <option value="rabbitmq">Yönetilen Servis — RabbitMQ</option>
+          <option value="valkey">Yönetilen Servis — Valkey</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Komuta öz kaynak payı (overhead)</label>
+        <input type="number" id="overheadInput" value="30" min="0" max="90" step="1" oninput="setOverhead(this.value)">
+        <span class="hint">% — varsayılan %30 (transkript: %25-30 arası)</span>
+      </div>
+    </div>
+
+    <table class="servers" style="margin-top:18px;">
+      <thead>
+        <tr>
+          <th>RAM (GiB)</th><th>vCPU</th><th>Depolama (TB)</th><th>Kira ($/ay)</th><th>Yedekleme (%)</th><th>Network (%)</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="serversBody"></tbody>
+    </table>
+    <div class="row-actions">
+      <button class="btn" onclick="addServer()">+ Sunucu Ekle</button>
+    </div>
+
+    <details class="advanced">
+      <summary>Gelişmiş varsayımlar</summary>
+      <div class="field-row">
+        <div class="field">
+          <label>Ay başına saat</label>
+          <input type="number" id="hoursInput" value="730" min="1" oninput="setHours(this.value)">
+        </div>
+        <div class="field">
+          <label>TB → GiB çarpanı</label>
+          <input type="number" id="tbGibInput" value="1024" min="1" oninput="setTbToGib(this.value)">
+        </div>
+      </div>
+    </details>
+
+    <div class="summary-line" id="capSummary"></div>
+  </section>
+
+  <div class="grid-2">
+    <!-- BLOCK 2: Canlı Başabaş & Kâr Paneli -->
+    <section class="card">
+      <h2>2. Doluluk, Başabaş ve Kâr</h2>
+      <p class="sub">Doluluk %, fiziksel sunucunun tamamına göredir (100% = sunucu tamamen dolu). Satılabilir tavanın (%100 − overhead) ötesi kırmızı çizgiyle işaretlidir ve aşılınca uyarı gösterilir.</p>
+
+      <div class="slider-wrap">
+        <div class="be-marker" id="beMarker"><span class="tag" id="beMarkerTag">BB</span></div>
+        <div class="ceiling-marker" id="ceilingMarker"><span class="tag" id="ceilingMarkerTag">TAVAN</span></div>
+        <input type="range" id="occSlider" min="0" max="100" step="0.5" value="50" oninput="setOccupancy(this.value)">
+      </div>
+      <div class="occ-readout">
+        <span>Doluluk (fiziksel sunucuya göre): <b id="occValLabel">%50,0</b></span>
+        <span>Satılabilir havuza göre karşılığı: <b id="sellEquivLabel">—</b></span>
+      </div>
+
+      <div class="tiles">
+        <div class="tile"><div class="label">Aylık Gelir</div><div class="value" id="tileRevenue">—</div></div>
+        <div class="tile"><div class="label">Sabit Maliyet</div><div class="value" id="tileCost">—</div></div>
+        <div class="tile"><div class="label">Kâr / Zarar</div><div class="value" id="tileProfit">—</div></div>
+        <div class="tile"><div class="label">Kâr Marjı</div><div class="value" id="tileMargin">—</div></div>
+      </div>
+
+      <div class="summary-line">
+        Başabaş noktası (fiziksel sunucuya göre): <b id="bePhysVal">—</b> &nbsp;|&nbsp;
+        satılabilir havuza göre karşılığı: <b id="beSellVal">—</b>
+      </div>
+      <div id="beWarning"></div>
+    </section>
+
+    <!-- BLOCK 3: Yeni Sunucu Eklersem Ne Olur -->
+    <section class="card">
+      <h2>3. Yeni Sunucu Eklersem Ne Olur?</h2>
+      <p class="sub">Kapasite büyür, maliyet hemen artar — ama mevcut gelir aynı kalır (gerçek müşteri sayısı anında artmaz).</p>
+
+      <div class="field-row" style="margin-top:0;">
+        <div class="field"><label>RAM (GiB)</label><input type="number" id="ns_ram" value="64" oninput="updateNewServer('ram', this.value)"></div>
+        <div class="field"><label>vCPU</label><input type="number" id="ns_vcpu" value="18" oninput="updateNewServer('vcpu', this.value)"></div>
+        <div class="field"><label>Depolama (TB)</label><input type="number" id="ns_storage" value="1" oninput="updateNewServer('storageTB', this.value)"></div>
+        <div class="field"><label>Kira ($/ay)</label><input type="number" id="ns_rent" value="120" oninput="updateNewServer('rent', this.value)"></div>
+        <div class="field"><label>Yedekleme (%)</label><input type="number" id="ns_backup" value="7" oninput="updateNewServer('backupPct', this.value)"></div>
+        <div class="field"><label>Network (%)</label><input type="number" id="ns_network" value="10" oninput="updateNewServer('networkPct', this.value)"></div>
+      </div>
+
+      <div class="whatif-cols">
+        <div class="whatif-col">
+          <h3>Şimdi</h3>
+          <div class="tiles">
+            <div class="tile"><div class="label">Maliyet</div><div class="value" id="nowCost">—</div></div>
+            <div class="tile"><div class="label">Gelir</div><div class="value" id="nowRevenue">—</div></div>
+            <div class="tile"><div class="label">Kâr / Zarar</div><div class="value" id="nowProfit">—</div></div>
+            <div class="tile"><div class="label">Doluluk</div><div class="value" id="nowOcc">—</div></div>
+          </div>
+        </div>
+        <div class="whatif-col">
+          <h3>Sunucuyu Şimdi Eklersem</h3>
+          <div class="tiles">
+            <div class="tile"><div class="label">Yeni Maliyet</div><div class="value" id="afterCost">—</div></div>
+            <div class="tile"><div class="label">Gelir (değişmez)</div><div class="value" id="afterRevenue">—</div></div>
+            <div class="tile"><div class="label">Yeni Kâr / Zarar</div><div class="value" id="afterProfit">—</div></div>
+            <div class="tile"><div class="label">Yeni Doluluk</div><div class="value" id="afterOcc">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="needed-box">
+        <div class="label">Yeniden başabaşa gelmek için gereken ek satış</div>
+        <div class="value" id="neededVal">—</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BLOCK 4: Kümeler Karşılaştırma Tablosu -->
+  <section class="card">
+    <h2>4. Kümeler Karşılaştırması</h2>
+    <p class="sub">Mevcut küme yapılandırmasını kaydedip, daha önce kaydettiğiniz kümelerle yan yana karşılaştırın.</p>
+    <div class="row-actions" style="margin-top:0;">
+      <button class="btn primary" id="saveClusterBtn" onclick="saveCluster()">Mevcut Kümeyi Kaydet</button>
+    </div>
+    <table class="compare" id="compareTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>Küme</th><th>Tip</th><th>Başabaş % (fiziksel)</th><th>Başabaş % (satılabilir)</th>
+          <th>Kâr @ %20*</th><th>Kâr @ %50*</th><th>Kâr @ %100*</th><th>Kâr Marjı @ %100*</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="savedClustersBody"></tbody>
+    </table>
+    <p class="empty-note" id="compareEmptyNote">Henüz kaydedilmiş küme yok.</p>
+    <p class="empty-note" id="compareFootnote" style="display:none;">* Kâr referans noktaları (%20/%50/%100) satılabilir havuza göredir — raporla ve Excel modeliyle birebir karşılaştırılabilsin diye bu sütunlar fiziksel bazına çevrilmedi.</p>
+  </section>
+
+  <footer class="note">
+    Not: Üstteki girdi alanları (küme/sunucu/servis tipi) sayfa yenilenince sıfırlanır — sadece "Kümeler Karşılaştırması" bölümünde kaydettiğiniz kümeler sunucudaki veritabanında kalıcı olarak saklanır ve herkesle paylaşılır. Hesaplamalar, Komuta_Basabas_Noktasi_Modeli.xlsx ve Komuta_Basabas_Raporu.docx'te doğrulanmış aynı formüllere dayanır: gelir doğrusaldır, sabit maliyet dolulukla değişmez, geliştirme maliyeti dahil değildir. Doluluk % ve başabaş noktası burada fiziksel sunucunun tamamına göre gösterilir (satılabilir tavanı — %100 − overhead — aşan seviyeler için uyarı verilir); satılabilir havuza göre karşılığı her yerde yanında ayrıca gösterilir. Kümeler karşılaştırma tablosundaki %20/%50/%100 kâr referans noktaları ise raporla ve Excel modeliyle birebir tutarlı kalması için satılabilir havuza göre hesaplanmıştır (bkz. tablo altındaki not).
+  </footer>
+</div>
+
+<script>
+  const PRICE_HOURLY = {
+    paas:     { vcpu: 0.013889, ram: 0.005556, storage: 0 },
+    postgres: { vcpu: 0.017847, ram: 0.007139, storage: 0.000201 },
+    rabbitmq: { vcpu: 0.017847, ram: 0.007139, storage: 0.000201 },
+    valkey:   { vcpu: 0.017847, ram: 0.007139, storage: 0.000201 },
+  };
+  const HAS_STORAGE = { paas: false, postgres: true, rabbitmq: true, valkey: true };
+  const TYPE_LABEL = { paas: 'App Hosting (PaaS)', postgres: 'PostgreSQL', rabbitmq: 'RabbitMQ', valkey: 'Valkey' };
+
+  const state = {
+    servers: [ { ram: 64, vcpu: 18, storageTB: 1, rent: 120, backupPct: 7, networkPct: 10 } ],
+    overhead: 30,
+    hoursPerMonth: 730,
+    tbToGib: 1024,
+    serviceType: 'paas',
+    occupancy: 50,
+    newServer: { ram: 64, vcpu: 18, storageTB: 1, rent: 120, backupPct: 7, networkPct: 10 },
+    savedClusters: [],
+  };
+
+  function fmtUSD(n) {
+    if (n === null || n === undefined || !isFinite(n)) return '—';
+    const sign = n < 0 ? '-' : '';
+    return sign + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtPct(n, digits) {
+    if (n === null || n === undefined || !isFinite(n)) return '—';
+    return '%' + n.toLocaleString('tr-TR', { minimumFractionDigits: digits ?? 2, maximumFractionDigits: digits ?? 2 });
+  }
+  function fmtNum(n, digits) {
+    if (n === null || n === undefined || !isFinite(n)) return '—';
+    return n.toLocaleString('tr-TR', { minimumFractionDigits: digits ?? 1, maximumFractionDigits: digits ?? 1 });
+  }
+
+  function fixedCostOf(servers) {
+    return servers.reduce((sum, s) => sum + (s.rent || 0) * (1 + (s.backupPct || 0) / 100 + (s.networkPct || 0) / 100), 0);
+  }
+  function capacityOf(servers, tbToGib) {
+    return servers.reduce((acc, s) => ({
+      vcpu: acc.vcpu + (s.vcpu || 0),
+      ram: acc.ram + (s.ram || 0),
+      storageGiB: acc.storageGiB + (s.storageTB || 0) * tbToGib,
+    }), { vcpu: 0, ram: 0, storageGiB: 0 });
+  }
+  function sellableOf(capacity, overheadPct) {
+    const ceiling = 1 - overheadPct / 100;
+    return { vcpu: capacity.vcpu * ceiling, ram: capacity.ram * ceiling, storageGiB: capacity.storageGiB * ceiling, ceiling };
+  }
+  function revenue100Of(sellable, type, hoursPerMonth) {
+    const p = PRICE_HOURLY[type];
+    let rev = sellable.vcpu * p.vcpu * hoursPerMonth + sellable.ram * p.ram * hoursPerMonth;
+    if (HAS_STORAGE[type]) rev += sellable.storageGiB * p.storage * hoursPerMonth;
+    return rev;
+  }
+
+  // ---- Servers table ----
+  function renderServers() {
+    const tbody = document.getElementById('serversBody');
+    tbody.innerHTML = '';
+    state.servers.forEach((s, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="number" value="${s.ram}" oninput="updateServerField(${i},'ram',this.value)"></td>
+        <td><input type="number" value="${s.vcpu}" oninput="updateServerField(${i},'vcpu',this.value)"></td>
+        <td><input type="number" value="${s.storageTB}" oninput="updateServerField(${i},'storageTB',this.value)"></td>
+        <td><input type="number" value="${s.rent}" oninput="updateServerField(${i},'rent',this.value)"></td>
+        <td><input type="number" value="${s.backupPct}" oninput="updateServerField(${i},'backupPct',this.value)"></td>
+        <td><input type="number" value="${s.networkPct}" oninput="updateServerField(${i},'networkPct',this.value)"></td>
+        <td>${state.servers.length > 1 ? `<button class="btn small danger" onclick="removeServer(${i})">Sil</button>` : ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  function addServer() {
+    const last = state.servers[state.servers.length - 1];
+    state.servers.push({ ...last });
+    renderServers();
+    recalc();
+  }
+  function removeServer(i) {
+    state.servers.splice(i, 1);
+    renderServers();
+    recalc();
+  }
+  // Numeric inputs: while the user is mid-edit (field briefly empty, or "-", "."),
+  // parseFloat returns NaN. Falling back to 0 in that instant would silently zero out
+  // a real field (e.g. overhead) for one keystroke and skew every downstream number.
+  // Instead, keep the previous valid value until a real number is typed.
+  function parseKeepPrevious(v, previous) {
+    const n = parseFloat(v);
+    return isNaN(n) ? previous : n;
+  }
+  function updateServerField(i, field, val) {
+    state.servers[i][field] = parseKeepPrevious(val, state.servers[i][field]);
+    recalc();
+  }
+  function updateNewServer(field, val) {
+    state.newServer[field] = parseKeepPrevious(val, state.newServer[field]);
+    recalc();
+  }
+  function setOverhead(v) {
+    const n = parseKeepPrevious(v, state.overhead);
+    state.overhead = Math.min(90, Math.max(0, n));
+    recalc();
+  }
+  function setHours(v) { state.hoursPerMonth = parseKeepPrevious(v, state.hoursPerMonth); recalc(); }
+  function setTbToGib(v) { state.tbToGib = parseKeepPrevious(v, state.tbToGib); recalc(); }
+  function setServiceType(v) { state.serviceType = v; recalc(); }
+  function setOccupancy(v) { state.occupancy = parseKeepPrevious(v, state.occupancy); recalc(); }
+
+  // ---- Saved clusters (persisted server-side in PostgreSQL via /api/clusters) ----
+  // Only the raw configuration (servers, overhead, service type, ...) is stored in the
+  // database; breakeven/profit are always recomputed client-side from that raw config
+  // with the same formulas as the rest of the page, so there is exactly one source of
+  // truth for the math no matter when a saved cluster is loaded back.
+  function computeClusterMetrics(cfg) {
+    const capacity = capacityOf(cfg.servers, cfg.tbToGib);
+    const sellable = sellableOf(capacity, cfg.overhead);
+    const fixedCost = fixedCostOf(cfg.servers);
+    const revenue100Phys = revenue100Of(capacity, cfg.serviceType, cfg.hoursPerMonth);
+    const revenue100Sell = revenue100Of(sellable, cfg.serviceType, cfg.hoursPerMonth);
+    const bePhys = revenue100Phys > 0 ? (fixedCost / revenue100Phys) * 100 : Infinity;
+    const bePct = revenue100Sell > 0 ? (fixedCost / revenue100Sell) * 100 : Infinity;
+    const profitAt = (pct) => (revenue100Sell * pct / 100) - fixedCost;
+    const profit100 = profitAt(100);
+    const margin100 = revenue100Sell > 0 ? (profit100 / revenue100Sell) * 100 : null;
+    return { bePct, bePhys, p20: profitAt(20), p50: profitAt(50), p100: profit100, margin100 };
+  }
+
+  async function loadClusters() {
+    try {
+      const res = await fetch('/api/clusters');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      state.savedClusters = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        serviceType: r.service_type,
+        servers: r.servers,
+        overhead: Number(r.overhead),
+        hoursPerMonth: Number(r.hours_per_month),
+        tbToGib: Number(r.tb_to_gib),
+      }));
+      renderSavedClusters(null);
+    } catch (err) {
+      console.error('Kümeler yüklenemedi:', err);
+      renderSavedClusters('Kümeler yüklenemedi — sunucuya bağlanılamıyor. (Bu sayfa doğrudan bir dosya olarak açıldıysa, kalıcı kayıt için Komuta üzerinde çalışan sürümü kullanın.)');
+    }
+  }
+
+  async function saveCluster() {
+    const name = document.getElementById('clusterName').value.trim() || `Küme ${state.savedClusters.length + 1}`;
+    const payload = {
+      name,
+      serviceType: state.serviceType,
+      servers: state.servers,
+      overhead: state.overhead,
+      hoursPerMonth: state.hoursPerMonth,
+      tbToGib: state.tbToGib,
+    };
+    const btn = document.getElementById('saveClusterBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/clusters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || ('HTTP ' + res.status));
+      }
+      await loadClusters();
+    } catch (err) {
+      alert('Küme kaydedilemedi: ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteSavedCluster(id) {
+    try {
+      const res = await fetch('/api/clusters/' + id, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) throw new Error('HTTP ' + res.status);
+      await loadClusters();
+    } catch (err) {
+      alert('Küme silinemedi: ' + err.message);
+    }
+  }
+
+  function renderSavedClusters(errorMessage) {
+    const table = document.getElementById('compareTable');
+    const note = document.getElementById('compareEmptyNote');
+    const footnote = document.getElementById('compareFootnote');
+    const tbody = document.getElementById('savedClustersBody');
+    if (errorMessage) {
+      table.style.display = 'none';
+      note.textContent = errorMessage;
+      note.style.display = 'block';
+      footnote.style.display = 'none';
+      return;
+    }
+    if (state.savedClusters.length === 0) {
+      table.style.display = 'none';
+      note.textContent = 'Henüz kaydedilmiş küme yok.';
+      note.style.display = 'block';
+      footnote.style.display = 'none';
+      return;
+    }
+    table.style.display = 'table';
+    note.style.display = 'none';
+    footnote.style.display = 'block';
+    tbody.innerHTML = '';
+    state.savedClusters.forEach((cfg) => {
+      const m = computeClusterMetrics(cfg);
+      const tr = document.createElement('tr');
+      const cls20 = m.p20 >= 0 ? 'profit-good' : 'profit-bad';
+      const cls50 = m.p50 >= 0 ? 'profit-good' : 'profit-bad';
+      const cls100 = m.p100 >= 0 ? 'profit-good' : 'profit-bad';
+      tr.innerHTML = `
+        <td>${cfg.name}</td>
+        <td>${TYPE_LABEL[cfg.serviceType] || cfg.serviceType}</td>
+        <td>${fmtPct(m.bePhys)}</td>
+        <td>${fmtPct(m.bePct)}</td>
+        <td class="${cls20}">${fmtUSD(m.p20)}</td>
+        <td class="${cls50}">${fmtUSD(m.p50)}</td>
+        <td class="${cls100}">${fmtUSD(m.p100)}</td>
+        <td>${fmtPct(m.margin100)}</td>
+        <td><button class="btn small danger" onclick="deleteSavedCluster(${cfg.id})">Sil</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ---- Main recalculation ----
+  // Primary axis (as of this revision): doluluk % and başabaş noktası are expressed against the
+  // FULL PHYSICAL server (0-100%). The satılabilir %(100-overhead) pool is shown as a secondary
+  // reference everywhere, and a red ceiling marker + warning fire whenever the physical occupancy
+  // (or the breakeven point itself) falls beyond what's actually sellable.
+  function recalc() {
+    const capacity = capacityOf(state.servers, state.tbToGib);
+    const sellable = sellableOf(capacity, state.overhead);
+    const fixedCost = fixedCostOf(state.servers);
+    const revenue100Phys = revenue100Of(capacity, state.serviceType, state.hoursPerMonth);
+    const revenue100Sell = revenue100Of(sellable, state.serviceType, state.hoursPerMonth);
+    const bePhys = revenue100Phys > 0 ? (fixedCost / revenue100Phys) * 100 : Infinity;
+    const bePct = revenue100Sell > 0 ? (fixedCost / revenue100Sell) * 100 : Infinity;
+    const ceilingPct = sellable.ceiling * 100; // e.g. 70 when overhead = 30
+
+    document.getElementById('capSummary').innerHTML =
+      `Toplam kapasite: <b>${fmtNum(capacity.vcpu,1)} vCPU, ${fmtNum(capacity.ram,1)} GiB RAM${HAS_STORAGE[state.serviceType] ? `, ${fmtNum(capacity.storageGiB,0)} GiB depolama` : ''}</b> &nbsp;→&nbsp; ` +
+      `Satılabilir havuz (%${fmtNum(100-state.overhead,0)}): <b>${fmtNum(sellable.vcpu,1)} vCPU, ${fmtNum(sellable.ram,1)} GiB RAM${HAS_STORAGE[state.serviceType] ? `, ${fmtNum(sellable.storageGiB,0)} GiB depolama` : ''}</b> &nbsp;|&nbsp; ` +
+      `Sabit aylık maliyet: <b>${fmtUSD(fixedCost)}</b> &nbsp;|&nbsp; %100 doluluk geliri (fiziksel): <b>${fmtUSD(revenue100Phys)}</b> (satılabilir tavanda: ${fmtUSD(revenue100Sell)})`;
+
+    // Block 2 — occupancy is now read straight off the physical 0-100 scale.
+    const occ = state.occupancy;
+    const revenue = revenue100Phys * occ / 100;
+    const profit = revenue - fixedCost;
+    const margin = revenue > 0 ? (profit / revenue) * 100 : null;
+    const sellEquiv = sellable.ceiling > 0 ? occ / sellable.ceiling : null;
+
+    document.getElementById('occValLabel').textContent = fmtPct(occ, 1);
+    document.getElementById('sellEquivLabel').textContent = sellEquiv !== null ? fmtPct(sellEquiv, 1) : '—';
+    document.getElementById('tileRevenue').textContent = fmtUSD(revenue);
+    document.getElementById('tileCost').textContent = fmtUSD(fixedCost);
+    const profitTile = document.getElementById('tileProfit');
+    profitTile.innerHTML = fmtUSD(profit) + `<span class="tag ${profit>=0?'good':'bad'}">${profit>=0?'KÂR':'ZARAR'}</span>`;
+    profitTile.className = 'value ' + (profit >= 0 ? 'good' : 'bad');
+    document.getElementById('tileMargin').textContent = fmtPct(margin);
+    document.getElementById('bePhysVal').textContent = isFinite(bePhys) ? fmtPct(bePhys) : 'ulaşılamıyor';
+    document.getElementById('beSellVal').textContent = isFinite(bePct) ? fmtPct(bePct) : 'ulaşılamıyor';
+
+    const beWarning = document.getElementById('beWarning');
+    let warnings = '';
+    if (occ > ceilingPct + 1e-9) {
+      warnings += `<div class="warn-banner">Doluluk, satılabilir tavanı (%${fmtNum(ceilingPct,1)}) aştı — sunucunun %${fmtNum(state.overhead,0)}'i her zaman Komuta'nın kendi kullanımına ayrıldığı için gerçekte satılabilecek maksimum fiziksel doluluk %${fmtNum(ceilingPct,1)}'tir. Bu noktanın ötesi yalnızca teorik bir referanstır, gerçekte satılamaz.</div>`;
+    }
+    if (!isFinite(bePhys) || bePhys > ceilingPct + 1e-9) {
+      warnings += `<div class="warn-banner">Bu yapılandırmada başabaş noktası satılabilir tavanın (%${fmtNum(ceilingPct,1)}) ötesinde kalıyor — mevcut sunucularla, satılabilir kapasitenin tamamı dolsa bile maliyet karşılanamaz. Sunucu maliyetini düşürün veya kapasiteyi/servis tipini gözden geçirin.</div>`;
+    }
+    beWarning.innerHTML = warnings;
+
+    const marker = document.getElementById('beMarker');
+    const clampedBe = Math.min(100, Math.max(0, isFinite(bePhys) ? bePhys : 100));
+    marker.style.left = `calc(8px + (100% - 16px) * ${clampedBe / 100})`;
+    document.getElementById('beMarkerTag').textContent = isFinite(bePhys) ? 'BB ' + fmtPct(bePhys,1) : 'BB —';
+
+    const ceilingMarker = document.getElementById('ceilingMarker');
+    const clampedCeiling = Math.min(100, Math.max(0, ceilingPct));
+    ceilingMarker.style.left = `calc(8px + (100% - 16px) * ${clampedCeiling / 100})`;
+    document.getElementById('ceilingMarkerTag').textContent = 'TAVAN ' + fmtPct(ceilingPct,1);
+
+    // Block 3: what-if — same physical-basis convention, so "Şimdi" reuses this block's occ/revenue.
+    const newCapacity = {
+      vcpu: capacity.vcpu + (state.newServer.vcpu || 0),
+      ram: capacity.ram + (state.newServer.ram || 0),
+      storageGiB: capacity.storageGiB + (state.newServer.storageTB || 0) * state.tbToGib,
+    };
+    const newFixedCost = fixedCost + fixedCostOf([state.newServer]);
+    const newRevenue100Phys = revenue100Of(newCapacity, state.serviceType, state.hoursPerMonth);
+    const Y = revenue; // unchanged real revenue
+    const newOccPct = newRevenue100Phys > 0 ? (Y / newRevenue100Phys) * 100 : 0;
+    const newBePct = newRevenue100Phys > 0 ? (newFixedCost / newRevenue100Phys) * 100 : Infinity;
+    const Z2 = Y - newFixedCost;
+    const neededUSD = Math.max(0, newFixedCost - Y);
+    const neededPct = isFinite(newBePct) ? Math.max(0, newBePct - newOccPct) : null;
+
+    document.getElementById('nowCost').textContent = fmtUSD(fixedCost);
+    document.getElementById('nowRevenue').textContent = fmtUSD(Y);
+    const nowProfitEl = document.getElementById('nowProfit');
+    nowProfitEl.textContent = fmtUSD(profit);
+    nowProfitEl.className = 'value ' + (profit >= 0 ? 'good' : 'bad');
+    document.getElementById('nowOcc').textContent = fmtPct(occ,1);
+
+    document.getElementById('afterCost').textContent = fmtUSD(newFixedCost);
+    document.getElementById('afterRevenue').textContent = fmtUSD(Y);
+    const afterProfitEl = document.getElementById('afterProfit');
+    afterProfitEl.textContent = fmtUSD(Z2);
+    afterProfitEl.className = 'value ' + (Z2 >= 0 ? 'good' : 'bad');
+    document.getElementById('afterOcc').textContent = fmtPct(newOccPct,1);
+
+    if (neededUSD <= 0.005) {
+      document.getElementById('neededVal').textContent = 'Zaten başabaşın üzerinde — ek satışa gerek yok.';
+    } else {
+      document.getElementById('neededVal').textContent = `${fmtUSD(neededUSD)} / ay ek gelir (fiziksel sunucunun +${fmtPct(neededPct,2)}'si)`;
+    }
+  }
+
+  // init
+  renderServers();
+  loadClusters();
+  recalc();
+</script>
+</body>
+</html>
