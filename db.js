@@ -4,8 +4,15 @@ const { Pool } = require('pg');
 // variables (PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE) when no config is
 // passed, so this works whether the platform wires a single DATABASE_URL or
 // separate PG* variables when the managed PostgreSQL addon is attached.
+//
+// Komuta's managed PostgreSQL presents a self-signed certificate, so we still
+// connect over TLS but skip certificate-chain verification (rejectUnauthorized:
+// false) — otherwise node-postgres refuses the connection with "self-signed
+// certificate in certificate chain".
 const pool = new Pool(
-  process.env.DATABASE_URL ? { connectionString: process.env.DATABASE_URL } : {}
+  process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+    : {}
 );
 
 async function initSchema() {
