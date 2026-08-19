@@ -38,9 +38,16 @@ async function initSchema() {
       overhead NUMERIC NOT NULL,
       hours_per_month NUMERIC NOT NULL DEFAULT 730,
       tb_to_gib NUMERIC NOT NULL DEFAULT 1024,
+      prices JSONB NOT NULL DEFAULT '{}'::jsonb,
+      oversell JSONB NOT NULL DEFAULT '{}'::jsonb,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // For a table that already existed before the "prices"/"oversell" columns were
+  // introduced (editable per-unit cost parameters and oversell multipliers), add
+  // them on top rather than requiring a manual migration step.
+  await pool.query(`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS prices JSONB NOT NULL DEFAULT '{}'::jsonb;`);
+  await pool.query(`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS oversell JSONB NOT NULL DEFAULT '{}'::jsonb;`);
 }
 
 module.exports = { pool, initSchema };
